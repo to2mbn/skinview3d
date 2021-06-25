@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="x-ua-compatible" content="ie=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+	<title>skinview3d</title>
+	<style>
+		body {
+			font-family: "Helvetica Neue", "Helvetica", "Arial", "sans-serif";
+			margin: 5px;
+		}
+
+		h1 {
+			font-size: 1.25em;
+		}
+
+		h2 {
+			font-size: 1em;
+		}
+
+		h1,
+		h2 {
+			margin-bottom: 0;
+		}
+
+		input[type="number"] {
+			max-width: 60px;
+		}
+
+		input[type="text"] {
+			box-sizing: border-box;
+			max-width: 250px;
+			width: calc(100% - 100px);
+		}
+
+		.control {
+			display: inline;
+		}
+
+		.control + .control {
+			margin-left: 10px;
+		}
+
+		.control-section {
+			margin-left: 10px;
+		}
+
+		.control-section>h1,
+		.control-section>h2 {
+			margin-left: -10px;
+		}
+
+		table {
+			border-collapse: collapse;
+		}
+
+		table td,
+		table th {
+			border: 1px black dashed;
+			text-align: left;
+		}
+
+		thead th {
+			border-top: unset;
+		}
+
+		tbody tr:last-child td,
+		tbody tr:last-child th {
+			border-bottom: unset;
+		}
+
+		table th:first-child,
+		table td:first-child {
+			border-left: unset;
+		}
+
+		table th:last-child,
+		table td:last-child {
+			border-right: unset;
+		}
+
+		table td input[type="checkbox"] {
+			vertical-align: middle;
+			margin: 0;
+			width: 100%;
+		}
+
+		footer {
+			margin-top: 10px;
+			padding-top: 10px;
+			border-top: 1px grey solid;
+		}
+
+		label {
+			white-space: nowrap;
+		}
+
+		.control-section ul {
+			margin-top: 0;
+			padding-left: 20px;
+		}
+	</style>
+</head>
+
+<body>
+
+	<canvas id="skin_container"></canvas>
+
+	<div class="controls">
+
+		<button id="reset_all" type="button" class="control">Reset All</button>
+
+		<div class="control-section">
+			<h1>Canvas Size</h1>
+			<label class="control">Width: <input id="canvas_width" type="number" value="300"></label>
+			<label class="control">Height: <input id="canvas_height" type="number" value="300"></label>
+		</div>
+
+		<div class="control-section">
+			<h1>Animation</h1>
+			<label class="control">Global Speed: <input id="global_animation_speed" type="number" value="1" step="0.1"></label>
+			<button id="animation_pause_resume" type="button" class="control">Pause / Resume</button>
+			<div>
+				<h2>Rotate</h2>
+				<label class="control"><input id="rotate_animation" type="checkbox"> Enable</label>
+				<label class="control">Speed: <input id="rotate_animation_speed" type="number" value="1" step="0.1"></label>
+			</div>
+			<div>
+				<h2>Walk / Run / Fly</h2>
+				<div class="control">
+					<label><input type="radio" id="primary_animation_none" name="primary_animation" value="" checked> None</label>
+					<label><input type="radio" id="primary_animation_walk" name="primary_animation" value="walk"> Walk</label>
+					<label><input type="radio" id="primary_animation_run" name="primary_animation" value="run"> Run</label>
+					<label><input type="radio" id="primary_animation_fly" name="primary_animation" value="fly"> Fly</label>
+				</div>
+				<label class="control">Speed: <input id="primary_animation_speed" type="number" value="1" step="0.1"></label>
+			</div>
+		</div>
+
+		<div class="control-section">
+			<h1>Mouse Control</h1>
+			<div class="control">
+				<label><input type="checkbox" id="control_rotate" checked> Enable Rotate</label>
+				<label><input type="checkbox" id="control_zoom" checked> Enable Zoom</label>
+				<label><input type="checkbox" id="control_pan"> Enable Pan</label>
+			</div>
+		</div>
+
+		<div class="control-section">
+			<h1>Skin Layers</h1>
+			<table id="layers_table">
+				<thead>
+					<tr>
+						<th></th>
+						<th>head</th>
+						<th>body</th>
+						<th>right arm</th>
+						<th>left arm</th>
+						<th>right leg</th>
+						<th>left leg</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<th>inner</th>
+						<td><input type="checkbox" data-layer="innerLayer" data-part="head" checked></td>
+						<td><input type="checkbox" data-layer="innerLayer" data-part="body" checked></td>
+						<td><input type="checkbox" data-layer="innerLayer" data-part="rightArm" checked></td>
+						<td><input type="checkbox" data-layer="innerLayer" data-part="leftArm" checked></td>
+						<td><input type="checkbox" data-layer="innerLayer" data-part="rightLeg" checked></td>
+						<td><input type="checkbox" data-layer="innerLayer" data-part="leftLeg" checked></td>
+					</tr>
+					<tr>
+						<th>outer</th>
+						<td><input type="checkbox" data-layer="outerLayer" data-part="head" checked></td>
+						<td><input type="checkbox" data-layer="outerLayer" data-part="body" checked></td>
+						<td><input type="checkbox" data-layer="outerLayer" data-part="rightArm" checked></td>
+						<td><input type="checkbox" data-layer="outerLayer" data-part="leftArm" checked></td>
+						<td><input type="checkbox" data-layer="outerLayer" data-part="rightLeg" checked></td>
+						<td><input type="checkbox" data-layer="outerLayer" data-part="leftLeg" checked></td>
+					</tr>
+				</tbody>
+			</table>
+			<div>
+				<h2>Back Equipment</h2>
+				<div class="control">
+					<label><input type="radio" id="back_equipment_cape" name="back_equipment" value="cape" checked> Cape</label>
+					<label><input type="radio" id="back_equipment_elytra" name="back_equipment" value="elytra"> Elytra</label>
+				</div>
+			</div>
+		</div>
+
+		<div class="control-section">
+			<h1>Textures</h1>
+			<div>
+				<div class="control">
+					<label>Skin URL: <input id="skin_url" type="text" value="img/1_8_texturemap_redux.png" placeholder="none" list="default_skins"></label>
+					<datalist id="default_skins">
+						<option value="img/1_8_texturemap_redux.png">
+						<option value="img/hacksore.png">
+						<option value="img/haka.png">
+						<option value="img/hatsune_miku.png">
+						<option value="img/ironman_hd.png">
+						<option value="img/sethbling.png">
+					</datalist>
+					<input id="skin_url_upload" type="file" accept="image/*" style="display: none;">
+					<button type="button" class="control"
+						onclick="document.getElementById('skin_url_upload').click();">Browse...</button>
+				</div>
+				<label class="control">Model:
+					<select id="skin_model">
+						<option value="auto-detect" selected>Auto detect</option>
+						<option value="default">Default</option>
+						<option value="slim">Slim</option>
+					</select>
+				</label>
+			</div>
+			<div>
+				<div class="control">
+					<label>Cape URL: <input id="cape_url" type="text" value="" placeholder="none" list="default_capes"></label>
+					<datalist id="default_capes">
+						<option value="">
+						<option value="img/mojang_cape.png">
+						<option value="img/legacy_cape.png">
+						<option value="img/hd_cape.png">
+					</datalist>
+					<input id="cape_url_upload" type="file" accept="image/*" style="display: none;">
+					<button type="button" class="control"
+						onclick="document.getElementById('cape_url_upload').click();">Browse...</button>
+				</div>
+			</div>
+		</div>
+
+		<div class="control-section">
+			<h1>Other examples</h1>
+			<ul>
+				<li><a href="offscreen-render.html">offscreen-render</a></li>
+			</ul>
+		</div>
+
+	</div>
+
+	<footer>
+		<div>
+			GitHub: <a href="https://github.com/bs-community/skinview3d">bs-community/skinview3d</a>
+		</div>
+		
+			<div>
+				Built from
+				commit <a href="https://github.com/bs-community/skinview3d/commit/825c2311ee6c128ddf6489ce6337bc1f0315fc2a">825c2311ee6c128ddf6489ce6337bc1f0315fc2a</a>
+				at <time datetime="2021-06-25T18:34:50Z">2021-06-25T18:34:50Z</time>
+			</div>
+		
+	</footer>
+
+	<script src="js/skinview3d.bundle.js"></script>
+	<script>
+		const skinParts = ["head", "body", "rightArm", "leftArm", "rightLeg", "leftLeg"];
+		const skinLayers = ["innerLayer", "outerLayer"];
+		const availableAnimations = {
+			walk: skinview3d.WalkingAnimation,
+			run: skinview3d.RunningAnimation,
+			fly: skinview3d.FlyingAnimation
+		};
+
+		let skinViewer;
+		let orbitControl;
+		let rotateAnimation;
+		let primaryAnimation;
+
+		function reloadSkin() {
+			const input = document.getElementById("skin_url");
+			const url = input.value;
+			if (url === "") {
+				skinViewer.loadSkin(null);
+				input.setCustomValidity("");
+			} else {
+				skinViewer.loadSkin(url, document.getElementById("skin_model").value)
+					.then(() => input.setCustomValidity(""))
+					.catch(e => {
+						input.setCustomValidity("Image can't be loaded.");
+						console.error(e);
+					});
+			}
+		}
+
+		function reloadCape() {
+			const input = document.getElementById("cape_url");
+			const url = input.value;
+			if (url === "") {
+				skinViewer.loadCape(null);
+				input.setCustomValidity("");
+			} else {
+				const selectedBackEquipment = document.querySelector('input[type="radio"][name="back_equipment"]:checked');
+				skinViewer.loadCape(url, { backEquipment: selectedBackEquipment.value })
+					.then(() => input.setCustomValidity(""))
+					.catch(e => {
+						input.setCustomValidity("Image can't be loaded.");
+						console.error(e);
+					});
+			}
+		}
+
+		function initializeControls() {
+			document.getElementById("canvas_width").addEventListener("change", e => skinViewer.width = e.target.value);
+			document.getElementById("canvas_height").addEventListener("change", e => skinViewer.height = e.target.value);
+			document.getElementById("global_animation_speed").addEventListener("change", e => skinViewer.animations.speed = e.target.value);
+			document.getElementById("animation_pause_resume").addEventListener("click", () => skinViewer.animations.paused = !skinViewer.animations.paused);
+			document.getElementById("rotate_animation").addEventListener("change", e => {
+				if (e.target.checked && rotateAnimation === null) {
+					rotateAnimation = skinViewer.animations.add(skinview3d.RotatingAnimation);
+					rotateAnimation.speed = document.getElementById("rotate_animation_speed").value;
+				} else if (!e.target.checked && rotateAnimation !== null) {
+					rotateAnimation.resetAndRemove();
+					rotateAnimation = null;
+				}
+			});
+			document.getElementById("rotate_animation_speed").addEventListener("change", e => {
+				if (rotateAnimation !== null) {
+					rotateAnimation.speed = e.target.value;
+				}
+			});
+			for (const el of document.querySelectorAll('input[type="radio"][name="primary_animation"]')) {
+				el.addEventListener("change", e => {
+					if (primaryAnimation !== null) {
+						primaryAnimation.resetAndRemove();
+						primaryAnimation = null;
+					}
+					if (e.target.value !== "") {
+						primaryAnimation = skinViewer.animations.add(availableAnimations[e.target.value]);
+						primaryAnimation.speed = document.getElementById("primary_animation_speed").value;
+					}
+				});
+			}
+			document.getElementById("primary_animation_speed").addEventListener("change", e => {
+				if (primaryAnimation !== null) {
+					primaryAnimation.speed = e.target.value;
+				}
+			});
+			document.getElementById("control_rotate").addEventListener("change", e => orbitControl.enableRotate = e.target.checked);
+			document.getElementById("control_zoom").addEventListener("change", e => orbitControl.enableZoom = e.target.checked);
+			document.getElementById("control_pan").addEventListener("change", e => orbitControl.enablePan = e.target.checked);
+			for (const part of skinParts) {
+				for (const layer of skinLayers) {
+					document.querySelector(`#layers_table input[type="checkbox"][data-part="${part}"][data-layer="${layer}"]`)
+						.addEventListener("change", e => skinViewer.playerObject.skin[part][layer].visible = e.target.checked);
+				}
+			}
+			const skinReader = new FileReader();
+			skinReader.addEventListener("load", e => {
+				document.getElementById("skin_url").value = skinReader.result;
+				reloadSkin();
+			});
+			document.getElementById("skin_url_upload").addEventListener("change", e => {
+				const file = e.target.files[0];
+				if (file !== undefined) {
+					skinReader.readAsDataURL(file);
+				}
+			});
+			const capeReader = new FileReader();
+			capeReader.addEventListener("load", e => {
+				document.getElementById("cape_url").value = capeReader.result;
+				reloadCape();
+			});
+			document.getElementById("cape_url_upload").addEventListener("change", e => {
+				const file = e.target.files[0];
+				if (file !== undefined) {
+					capeReader.readAsDataURL(file);
+				}
+			});
+			document.getElementById("skin_url").addEventListener("change", () => reloadSkin());
+			document.getElementById("skin_model").addEventListener("change", () => reloadSkin());
+			document.getElementById("cape_url").addEventListener("change", () => reloadCape());
+
+			for (const el of document.querySelectorAll('input[type="radio"][name="back_equipment"]')) {
+				el.addEventListener("change", e => {
+					if (skinViewer.playerObject.backEquipment === null) {
+						// cape texture hasn't been loaded yet
+						// this option will be processed on texture loading
+					} else {
+						skinViewer.playerObject.backEquipment = e.target.value;
+					}
+				});
+			}
+
+			document.getElementById("reset_all").addEventListener("click", () => {
+				skinViewer.dispose();
+				orbitControl.dispose();
+				initializeViewer();
+			});
+		}
+
+		function initializeViewer() {
+			skinViewer = new skinview3d.FXAASkinViewer({
+				canvas: document.getElementById("skin_container"),
+				alpha: false
+			});
+			skinViewer.renderer.setClearColor(0x5a76f3);
+			orbitControl = skinview3d.createOrbitControls(skinViewer);
+			rotateAnimation = null;
+			primaryAnimation = null;
+
+			skinViewer.width = document.getElementById("canvas_width").value;
+			skinViewer.height = document.getElementById("canvas_height").value;
+			skinViewer.animations.speed = document.getElementById("global_animation_speed").value;
+			if (document.getElementById("rotate_animation").checked) {
+				rotateAnimation = skinViewer.animations.add(skinview3d.RotatingAnimation);
+				rotateAnimation.speed = document.getElementById("rotate_animation_speed").value;
+			}
+			const primaryAnimationName = document.querySelector('input[type="radio"][name="primary_animation"]:checked').value;
+			if (primaryAnimationName !== "") {
+				primaryAnimation = skinViewer.animations.add(availableAnimations[primaryAnimationName]);
+				primaryAnimation.speed = document.getElementById("primary_animation_speed").value;
+			}
+			orbitControl.enableRotate = document.getElementById("control_rotate").checked;
+			orbitControl.enableZoom = document.getElementById("control_zoom").checked;
+			orbitControl.enablePan = document.getElementById("control_pan").checked;
+			for (const part of skinParts) {
+				for (const layer of skinLayers) {
+					skinViewer.playerObject.skin[part][layer].visible =
+						document.querySelector(`#layers_table input[type="checkbox"][data-part="${part}"][data-layer="${layer}"]`).checked;
+				}
+			}
+			reloadSkin();
+			reloadCape();
+		}
+
+		initializeControls();
+		initializeViewer();
+	</script>
+
+	<script type="module" src="https://unpkg.com/stats.js@0.17.0/src/Stats.js" integrity="sha384-W71K+d2HbqXqQWSj3Vj4RDsIVvIV7lR8O6RArKAiqB39ntwLci0W08qOn4Z1n8sM" crossorigin="anonymous" async></script>
+	<script type="module" async>
+		import Stats from "https://unpkg.com/stats.js@0.17.0/src/Stats.js";
+		const stats = new Stats();
+		stats.dom.style.left = "";
+		stats.dom.style.right = "0";
+		document.body.appendChild(stats.dom);
+		function loop() {
+			stats.update();
+			requestAnimationFrame(loop)
+		}
+		requestAnimationFrame(loop);
+	</script>
+
+</body>
+</html>
