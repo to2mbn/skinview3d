@@ -1,4 +1,4 @@
-import { ModelType } from "skinview-utils";
+import { ModelType } from "@james090500/skinview-utils";
 import { BoxGeometry, BufferAttribute, DoubleSide, FrontSide, Group, Mesh, MeshBasicMaterial, Object3D, Texture, Vector2 } from "three";
 
 function setUVs(box: BoxGeometry, u: number, v: number, width: number, height: number, depth: number, textureWidth: number, textureHeight: number): void {
@@ -34,6 +34,10 @@ function setSkinUVs(box: BoxGeometry, u: number, v: number, width: number, heigh
 
 function setCapeUVs(box: BoxGeometry, u: number, v: number, width: number, height: number, depth: number): void {
 	setUVs(box, u, v, width, height, depth, 64, 32);
+}
+
+function setEarUVs(box: BoxGeometry, u: number, v: number, width: number, height: number, depth: number): void {
+	setUVs(box, u, v, width, height, depth, 14, 7)
 }
 
 /**
@@ -331,6 +335,44 @@ export class ElytraObject extends Group {
 	}
 }
 
+export class EarsObject extends Group {
+
+	readonly leftEar: Mesh;
+	readonly rightEar: Mesh;
+
+	constructor(texture: Texture) {
+		super();
+
+		const earMaterial = new MeshBasicMaterial({
+			map: texture,
+			side: DoubleSide,
+			transparent: true,
+			alphaTest: 1e-5
+		});
+
+		// back = outside
+		// front = inside
+		const earBox = new BoxGeometry(6, 6, 1);
+		//x1: number, y1: number, x2: number, y2: number
+		setEarUVs(earBox, 0, 0, 6, 6, 1);
+		//setCapeUVs(leftWingBox, 22, 0, 10, 20, 2);
+
+		this.leftEar = new Mesh(earBox, earMaterial);
+		this.leftEar.position.x = -5.5;
+		this.leftEar.scale.x = 1.3;
+		this.leftEar.scale.y = 1.3;
+		this.leftEar.scale.z = 1.3;
+		this.add(this.leftEar);
+
+		this.rightEar = new Mesh(earBox, earMaterial);
+		this.rightEar.position.x = 5.5;
+		this.rightEar.scale.x = 1.3;
+		this.rightEar.scale.y = 1.3;
+		this.rightEar.scale.z = 1.3;
+		this.add(this.rightEar);
+	}
+}
+
 export type BackEquipment = "cape" | "elytra";
 
 export class PlayerObject extends Group {
@@ -338,17 +380,20 @@ export class PlayerObject extends Group {
 	readonly skin: SkinObject;
 	readonly cape: CapeObject;
 	readonly elytra: ElytraObject;
+	readonly ears: EarsObject
 
-	constructor(skinTexture: Texture, capeTexture: Texture) {
+	constructor(skinTexture: Texture, capeTexture: Texture, earTexture: Texture) {
 		super();
 
 		this.skin = new SkinObject(skinTexture);
 		this.skin.name = "skin";
+		this.skin.position.y = -2
 		this.add(this.skin);
 
 		this.cape = new CapeObject(capeTexture);
 		this.cape.name = "cape";
 		this.cape.position.z = -2;
+		this.cape.position.y = -2;
 		this.cape.rotation.x = 10.8 * Math.PI / 180;
 		this.cape.rotation.y = Math.PI;
 		this.add(this.cape);
@@ -356,8 +401,14 @@ export class PlayerObject extends Group {
 		this.elytra = new ElytraObject(capeTexture);
 		this.elytra.name = "elytra";
 		this.elytra.position.z = -2;
+		this.elytra.position.y = -2;
 		this.elytra.visible = false;
 		this.add(this.elytra);
+
+		this.ears = new EarsObject(earTexture);
+		this.ears.name = "ears";
+		this.ears.position.y = 8;
+		this.add(this.ears);
 	}
 
 	get backEquipment(): BackEquipment | null {

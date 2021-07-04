@@ -101,6 +101,15 @@
 			margin-top: 0;
 			padding-left: 20px;
 		}
+
+		.skin_container_error {
+			padding: 1rem;
+			margin: 1rem;
+			display: inline-block;
+			background: red;
+			color: white;
+			font-weight: bold;
+		}
 	</style>
 </head>
 
@@ -204,6 +213,7 @@
 						<option value="img/hatsune_miku.png">
 						<option value="img/ironman_hd.png">
 						<option value="img/sethbling.png">
+						<option value="img/james090500.png">
 					</datalist>
 					<input id="skin_url_upload" type="file" accept="image/*" style="display: none;">
 					<button type="button" class="control"
@@ -219,12 +229,25 @@
 			</div>
 			<div>
 				<div class="control">
+					<label>Ear URL: <input id="ears_url" type="text" value="" placeholder="none" list="default_ears"></label>
+					<datalist id="default_ears">
+						<option value="">
+						<option value="img/ears.png">
+					</datalist>
+					<input id="ears_url_upload" type="file" accept="image/*" style="display: none;">
+					<button type="button" class="control"
+						onclick="document.getElementById('ears_url_upload').click();">Browse...</button>
+				</div>
+			</div>
+			<div>
+				<div class="control">
 					<label>Cape URL: <input id="cape_url" type="text" value="" placeholder="none" list="default_capes"></label>
 					<datalist id="default_capes">
 						<option value="">
 						<option value="img/mojang_cape.png">
 						<option value="img/legacy_cape.png">
 						<option value="img/hd_cape.png">
+						<option value="img/animated.png">
 					</datalist>
 					<input id="cape_url_upload" type="file" accept="image/*" style="display: none;">
 					<button type="button" class="control"
@@ -283,6 +306,17 @@
 						input.setCustomValidity("Image can't be loaded.");
 						console.error(e);
 					});
+			}
+		}
+
+		function reloadEars() {
+			const input = document.getElementById("ears_url");
+			const url = input.value;
+			if (url === "") {
+				skinViewer.loadEars(null);
+				input.setCustomValidity("");
+			} else {
+				skinViewer.loadEars(url);
 			}
 		}
 
@@ -359,6 +393,17 @@
 					skinReader.readAsDataURL(file);
 				}
 			});
+			const earsReader = new FileReader();
+			earsReader.addEventListener("load", e => {
+				document.getElementById("ears_url").value = earsReader.result;
+				reloadEars();
+			});
+			document.getElementById("ears_url_upload").addEventListener("change", e => {
+				const file = e.target.files[0];
+				if (file !== undefined) {
+					earsReader.readAsDataURL(file);
+				}
+			});
 			const capeReader = new FileReader();
 			capeReader.addEventListener("load", e => {
 				document.getElementById("cape_url").value = capeReader.result;
@@ -372,6 +417,7 @@
 			});
 			document.getElementById("skin_url").addEventListener("change", () => reloadSkin());
 			document.getElementById("skin_model").addEventListener("change", () => reloadSkin());
+			document.getElementById("ears_url").addEventListener("change", () => reloadEars());
 			document.getElementById("cape_url").addEventListener("change", () => reloadCape());
 
 			for (const el of document.querySelectorAll('input[type="radio"][name="back_equipment"]')) {
@@ -424,6 +470,7 @@
 				}
 			}
 			reloadSkin();
+			reloadEars();
 			reloadCape();
 		}
 

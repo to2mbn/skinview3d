@@ -1,4 +1,4 @@
-import { inferModelType, isTextureSource, loadCapeToCanvas, loadImage, loadSkinToCanvas, ModelType, RemoteImage, TextureSource } from "skinview-utils";
+import { inferModelType, isTextureSource, loadImage, loadSkinToCanvas, loadCapeToCanvas, animateCape, loadEarsToCanvas, ModelType, RemoteImage, TextureSource } from "@james090500/skinview-utils";
 import { NearestFilter, PerspectiveCamera, Scene, Texture, Vector2, WebGLRenderer } from "three";
 import { RootAnimation } from "./animation.js";
 import { BackEquipment, PlayerObject } from "./model.js";
@@ -24,6 +24,7 @@ export interface SkinViewerOptions {
 	skin?: RemoteImage | TextureSource;
 	model?: ModelType | "auto-detect";
 	cape?: RemoteImage | TextureSource;
+	ears?: RemoteImage | TextureSource;
 
 	/**
 	 * Whether the canvas contains an alpha buffer. Default is true.
@@ -59,8 +60,12 @@ export class SkinViewer {
 
 	readonly skinCanvas: HTMLCanvasElement;
 	readonly capeCanvas: HTMLCanvasElement;
+	readonly earsCanvas: HTMLCanvasElement;
 	private readonly skinTexture: Texture;
 	private readonly capeTexture: Texture;
+	private readonly earTexture: Texture;
+
+	private capeImage: TextureSource | undefined;
 
 	private _disposed: boolean = false;
 	private _renderPaused: boolean = false;
@@ -79,32 +84,50 @@ export class SkinViewer {
 		this.capeTexture.magFilter = NearestFilter;
 		this.capeTexture.minFilter = NearestFilter;
 
+		this.earsCanvas = document.createElement("canvas");
+		this.earTexture = new Texture(this.earsCanvas);
+		this.earTexture.magFilter = NearestFilter;
+		this.earTexture.minFilter = NearestFilter;
+
+		// scene
 		this.scene = new Scene();
 
 		// Use smaller fov to avoid distortion
 		this.camera = new PerspectiveCamera(40);
 		this.camera.position.y = -8;
-		this.camera.position.z = 60;
+		this.camera.position.z = 64;
 
-		this.renderer = new WebGLRenderer({
-			canvas: this.canvas,
-			alpha: options.alpha !== false, // default: true
-			preserveDrawingBuffer: options.preserveDrawingBuffer === true // default: false
+		try {
+			this.renderer = new WebGLRenderer({
+				canvas: this.canvas,
+				alpha: options.alpha !== false, // default: true
+				preserveDrawingBuffer: options.preserveDrawingBuffer === true // default: false
+			});
+			this.renderer.setPixelRatio(window.devicePixelRatio);
+		} catch(error) {
+			const errorDiv = document.createElement('div');
+			errorDiv.classList.add(`${this.canvas.id}_error`);
+			errorDiv.textContent = "Your browser doesn't support WebGL. You will encounter issues!";
+			document.body.insertBefore(errorDiv, this.canvas.nextSibling)
+			this.canvas.remove();
+			throw "No WebGL Support";
+		}
 
-		});
-		this.renderer.setPixelRatio(window.devicePixelRatio);
-
-		this.playerObject = new PlayerObject(this.skinTexture, this.capeTexture);
+		this.playerObject = new PlayerObject(this.skinTexture, this.capeTexture, this.earTexture);
 		this.playerObject.name = "player";
 		this.playerObject.skin.visible = false;
 		this.playerObject.cape.visible = false;
+		this.playerObject.ears.visible = false;
 		this.scene.add(this.playerObject);
-
+``
 		if (options.skin !== undefined) {
 			this.loadSkin(options.skin, options.model);
 		}
 		if (options.cape !== undefined) {
 			this.loadCape(options.cape);
+		}
+		if (options.ears !== undefined) {
+			this.loadEars(options.ears);
 		}
 		if (options.width !== undefined) {
 			this.width = options.width;
@@ -120,13 +143,15 @@ export class SkinViewer {
 		}
 	}
 
+	/**
+	 * 	Loads the Skin
+	 */
 	loadSkin(empty: null): void;
 	loadSkin<S extends TextureSource | RemoteImage>(
 		source: S,
 		model?: ModelType | "auto-detect",
 		options?: LoadOptions
 	): S extends TextureSource ? void : Promise<void>;
-
 	loadSkin(
 		source: TextureSource | RemoteImage | null,
 		model: ModelType | "auto-detect" = "auto-detect",
@@ -143,20 +168,20 @@ export class SkinViewer {
 				this.playerObject.skin.visible = true;
 			}
 		} else {
-			return loadImage(source).then(image => this.loadSkin(image, model, options));
+			return loadImage(source).then(image => this.loadSkin(image, model, options)).catch(e => {
+				console.log(e);
+			});
 		}
 	}
 
-	resetSkin(): void {
-		this.playerObject.skin.visible = false;
-	}
-
+	/**
+	 * Loads the cape
+	 */
 	loadCape(empty: null): void;
 	loadCape<S extends TextureSource | RemoteImage>(
 		source: S,
 		options?: CapeLoadOptions
 	): S extends TextureSource ? void : Promise<void>;
-
 	loadCape(
 		source: TextureSource | RemoteImage | null,
 		options: CapeLoadOptions = {}
@@ -170,12 +195,50 @@ export class SkinViewer {
 				this.playerObject.backEquipment = options.backEquipment === undefined ? "cape" : options.backEquipment;
 			}
 		} else {
-			return loadImage(source).then(image => this.loadCape(image, options));
+			return loadImage(source).then(image => {
+				this.capeImage = image
+				this.loadCape(image, options)
+			}).catch(e => {
+				console.log(e);
+			});
 		}
 	}
 
-	resetCape(): void {
+	/**
+	 * Load Ears
+	 */
+	loadEars(empty: null): void;
+	loadEars<S extends TextureSource | RemoteImage>(
+		source: S,
+		options?: LoadOptions
+	): S extends TextureSource ? void : Promise<void>;
+	loadEars(
+		source: TextureSource | RemoteImage | null,
+		options: LoadOptions = {}
+	): void | Promise<void> {
+		if (source === null) {
+			this.resetEars();
+		} else if (isTextureSource(source)) {
+			loadEarsToCanvas(this.earsCanvas, source);
+			this.earTexture.needsUpdate = true;
+			this.playerObject.ears.visible = true;
+		} else {
+			return loadImage(source).then(image => this.loadEars(image, options)).catch(e => {
+				console.log(e);
+			});
+		}
+	}
+
+	protected resetSkin(): void {
+		this.playerObject.skin.visible = false;
+	}
+
+	protected resetCape(): void {
 		this.playerObject.backEquipment = null;
+	}
+
+	protected resetEars(): void {
+		this.playerObject.ears.visible = false;
 	}
 
 	private draw(): void {
@@ -184,6 +247,11 @@ export class SkinViewer {
 		}
 		this.animations.runAnimationLoop(this.playerObject);
 		this.render();
+
+		if(this.capeImage != undefined) {
+			this.capeTexture.needsUpdate = animateCape(this.capeCanvas, this.capeImage);
+		}
+
 		window.requestAnimationFrame(() => this.draw());
 	}
 
@@ -198,7 +266,8 @@ export class SkinViewer {
 	setSize(width: number, height: number): void {
 		this.camera.aspect = width / height;
 		this.camera.updateProjectionMatrix();
-		this.renderer.setSize(width, height);
+		//False at the end to disable updateStyle to stop the canvas having inline styles added
+		this.renderer.setSize(width, height, false);
 	}
 
 	dispose(): void {
@@ -206,6 +275,7 @@ export class SkinViewer {
 		this.renderer.dispose();
 		this.skinTexture.dispose();
 		this.capeTexture.dispose();
+		this.earTexture.dispose();
 	}
 
 	get disposed(): boolean {
